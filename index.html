@@ -6,30 +6,38 @@
     <title>Elite Wallet By Amrit Kar</title>
     <style>
         :root { --main-bg: #050505; --accent: #00ff00; --card-unpaid: linear-gradient(135deg, #7b0000 0%, #cc0000 100%); --card-paid: linear-gradient(135deg, #004d00 0%, #008000 100%); }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--main-bg); color: white; overflow-x: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--main-bg); color: white; overflow-x: hidden; }
 
         header { padding: 18px; display: flex; align-items: center; background: #111; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #222; }
         .menu-btn { font-size: 26px; cursor: pointer; margin-right: 15px; color: var(--accent); }
         .app-title { font-weight: 900; letter-spacing: 1.5px; font-size: 16px; color: #fff; }
         .by-line { font-size: 9px; color: #888; display: block; letter-spacing: 0.5px; }
 
-        .sidebar { position: fixed; left: -300px; top: 0; width: 300px; height: 100%; background: #0f0f0f; z-index: 1000; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); padding: 25px; box-sizing: border-box; border-right: 1px solid #333; }
-        .sidebar.active { transform: translateX(300px); }
+        /* SIDEBAR */
+        .sidebar { position: fixed; left: -320px; top: 0; width: 320px; height: 100%; background: #0f0f0f; z-index: 1000; transition: transform 0.4s ease; padding: 25px; box-sizing: border-box; border-right: 1px solid #333; overflow-y: auto; }
+        .sidebar.active { transform: translateX(320px); }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 999; backdrop-filter: blur(4px); }
         .overlay.active { display: block; }
 
+        .menu-label { font-size: 11px; color: #666; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
+        
+        /* CARDS */
         .container { padding: 20px; }
-        .card { width: 100%; min-height: 160px; margin-bottom: 20px; border-radius: 20px; padding: 22px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.05); }
+        .card { width: 100%; min-height: 220px; margin-bottom: 20px; border-radius: 22px; padding: 22px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+        .card-img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.2; z-index: 0; }
+        .card-content { position: relative; z-index: 1; }
         .unpaid { background: var(--card-unpaid); }
         .paid { background: var(--card-paid); }
         
-        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        .card-label { font-size: 10px; font-weight: 900; letter-spacing: 2px; color: rgba(255,255,255,0.6); text-transform: uppercase; }
-        .card-digits { font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); letter-spacing: 1px; }
-        
+        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .card-serial { font-size: 10px; font-weight: 900; letter-spacing: 2px; }
+        .card-digits { font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; }
+
+        /* INPUTS & BUTTONS */
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; font-size: 14px; }
         button { padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; font-size: 14px; }
         .btn-action { background: #fff; color: #000; margin-top: 15px; }
-        input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; font-size: 14px; }
+        .btn-sync { background: #ffd700; color: #000; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -45,21 +53,34 @@
     <div class="overlay" onclick="toggleMenu()"></div>
 
     <div class="sidebar" id="sidebar">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 25px; color: var(--accent);">Control Center</div>
+        <div class="menu-label">Google Identity</div>
         <div id="g_id_onload" data-client_id="201507687807-o1ko23rr5j1odmibsa24vgn6gci61j8l.apps.googleusercontent.com" data-callback="onLogin"></div>
         <div class="g_id_signin" data-type="standard" data-theme="dark"></div>
-        <hr style="border:0; border-top:1px solid #222; margin:25px 0;">
-        <input type="text" id="bank" placeholder="Bank Name">
+        <div id="user-status" style="margin:10px 0; font-size:12px; color:#ff4d4d;">Status: Offline</div>
+
+        <hr style="border:0; border-top:1px solid #222; margin:20px 0;">
+
+        <div class="menu-label">Smart SMS Processor</div>
+        <textarea id="sms-paste" rows="3" placeholder="Paste bank SMS here..."></textarea>
+        <button class="btn-sync" onclick="processSMS()">⚡ SYNC FROM SMS</button>
+
+        <hr style="border:0; border-top:1px solid #222; margin:20px 0;">
+
+        <div class="menu-label">Register New Card</div>
+        <input type="text" id="bank" placeholder="Card Name">
         <input type="number" id="last4" placeholder="Last 4 Digits">
-        <input type="number" id="limit" placeholder="Credit Limit">
-        <input type="number" id="day" placeholder="Stmt Date (1-31)">
+        <input type="number" id="limit" placeholder="Limit">
+        <input type="number" id="day" placeholder="Stmt Day">
+        <p style="font-size:10px; color:#888;">Optional: Add Card Photo</p>
+        <input type="file" id="card-photo" accept="image/*" style="font-size:10px;">
+        
         <button style="background:var(--accent); color:black;" onclick="addCard()">+ REGISTER CARD</button>
     </div>
 
     <div class="container" id="list"></div>
 
     <script>
-        let cards = JSON.parse(localStorage.getItem('EliteV28_Clear')) || [];
+        let cards = JSON.parse(localStorage.getItem('EliteV24_Media')) || [];
         const today = new Date().getDate();
         const thisMonth = new Date().getMonth();
 
@@ -70,19 +91,54 @@
 
         function onLogin(r) {
             const user = JSON.parse(atob(r.credential.split('.')[1]));
-            alert("Recognized: " + user.name);
+            document.getElementById('user-status').innerText = "Logged in: " + user.name;
+            document.getElementById('user-status').style.color = "var(--accent)";
         }
 
-        function addCard() {
+        async function addCard() {
             const bank = document.getElementById('bank').value;
             const last4 = document.getElementById('last4').value;
             const limit = document.getElementById('limit').value;
             const day = parseInt(document.getElementById('day').value);
+            const photoFile = document.getElementById('card-photo').files[0];
+            let photoBase64 = "";
+
+            if (photoFile) {
+                photoBase64 = await toBase64(photoFile);
+            }
+
             if(bank && day && last4) {
-                cards.push({ bank, last4, limit, day, lastPaidMonth: -1, paidDate: "" });
+                cards.push({ bank, last4, limit, day, lastPaidMonth: -1, paidDate: "", photo: photoBase64, amt: "0.00" });
                 save();
                 toggleMenu();
                 document.querySelectorAll('input').forEach(i => i.value = '');
+            }
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        function processSMS() {
+            const text = document.getElementById('sms-paste').value;
+            const amtMatch = text.match(/(?:Rs|INR|amt)\.?\s?([0-9,]+\.[0-9]{2})/i);
+            const digitMatch = text.match(/(?:\.\.|XX|card)\s?(\d{4})/i);
+            
+            if (amtMatch) {
+                const scannedAmt = amtMatch[1].replace(/,/g, '');
+                const scannedDigits = digitMatch ? digitMatch[1] : null;
+                let found = false;
+                cards.forEach(c => {
+                    if (scannedDigits && c.last4 === scannedDigits) {
+                        c.amt = scannedAmt;
+                        found = true;
+                    }
+                });
+                if(found) { save(); alert("Boom! Card Updated."); toggleMenu(); }
+                else { alert("Amount Found: ₹" + scannedAmt + ". No card match."); }
             }
         }
 
@@ -96,7 +152,7 @@
             save();
         }
 
-        function save() { localStorage.setItem('EliteV28_Clear', JSON.stringify(cards)); render(); }
+        function save() { localStorage.setItem('EliteV24_Media', JSON.stringify(cards)); render(); }
 
         function render() {
             const list = document.getElementById('list');
@@ -104,26 +160,29 @@
             cards.forEach((c, i) => {
                 const isPaid = c.lastPaidMonth === thisMonth;
                 const isDue = today >= c.day;
-                const diff = c.day - today;
-                const isUpcoming = (diff <= 5 && diff > 0);
-                
                 const div = document.createElement('div');
                 div.className = `card ${isPaid ? 'paid' : 'unpaid'}`;
                 
+                let photoHtml = c.photo ? `<img src="${c.photo}" class="card-img-bg">` : '';
+                
                 div.innerHTML = `
-                    <div class="card-top">
-                        <div class="card-label">CARD ${i+1}</div>
-                        <div class="card-digits">XXXX ${c.last4}</div>
+                    ${photoHtml}
+                    <div class="card-content">
+                        <div class="card-top">
+                            <div class="card-serial">CARD ${i+1}</div>
+                            <div class="card-digits">XXXX ${c.last4}</div>
+                        </div>
+                        <div style="font-size:26px; font-weight:900; text-transform:uppercase;">${c.bank}</div>
+                        <div style="font-size:18px; font-weight:bold; margin-top:5px; color:#ffd700;">₹ ${Number(c.amt).toLocaleString()}</div>
+                        <div style="font-size:11px; font-weight:bold; margin-top:5px;">
+                            ${isPaid ? '✅ SETTLED: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : '⌛ PENDING')}
+                        </div>
+                        <div style="font-size:12px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px; margin-top:10px;">
+                            LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th
+                        </div>
+                        <button class="btn-action" onclick="togglePaid(${i})">${isPaid ? 'RESET' : 'MARK AS PAID'}</button>
+                        <button style="background:none; color:rgba(255,255,255,0.3); font-size:10px; margin-top:10px;" onclick="if(confirm('Delete?')){cards.splice(${i},1); save();}">Remove</button>
                     </div>
-                    <div style="font-size:26px; font-weight:900; text-transform:uppercase; letter-spacing:1px;">${c.bank}</div>
-                    <div style="font-size:11px; font-weight:bold; margin-top:8px; opacity:0.9;">
-                        ${isPaid ? '✅ SETTLED: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING ('+diff+'d)' : '⏳ PENDING'))}
-                    </div>
-                    <div style="font-size:12px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px; margin-top:12px;">
-                        LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th
-                    </div>
-                    <button class="btn-action" onclick="togglePaid(${i})">${isPaid ? 'RESET CYCLE' : 'MARK AS PAID'}</button>
-                    <button style="background:none; color:rgba(255,255,255,0.3); font-size:10px; margin-top:12px;" onclick="if(confirm('Delete?')){cards.splice(${i},1); save();}">Remove Card</button>
                 `;
                 list.appendChild(div);
             });
