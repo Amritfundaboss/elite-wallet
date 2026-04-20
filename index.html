@@ -11,7 +11,7 @@
             --debit-accent: #00d4ff; 
             --card-unpaid: linear-gradient(135deg, #7b0000 0%, #cc0000 100%); 
             --card-paid: linear-gradient(135deg, #004d00 0%, #008000 100%); 
-            --card-debit: linear-gradient(135deg, #002d4d 0%, #005696 100%); 
+            --card-debit: #1a1a1a; 
         }
         body { font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--main-bg); color: white; overflow-x: hidden; }
 
@@ -20,11 +20,7 @@
         .app-title { font-weight: 900; letter-spacing: 1.5px; font-size: 16px; color: #fff; }
         .by-line { font-size: 9px; color: #888; display: block; letter-spacing: 0.5px; }
 
-        .tabs { display: flex; background: #111; border-bottom: 1px solid #222; position: sticky; top: 60px; z-index: 90; }
-        .tab { flex: 1; text-align: center; padding: 15px; font-size: 12px; font-weight: bold; cursor: pointer; color: #555; transition: 0.3s; }
-        .tab.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
-        .tab.active-debit { color: var(--debit-accent); border-bottom: 3px solid var(--debit-accent); }
-
+        /* SIDEBAR */
         .sidebar { position: fixed; left: -320px; top: 0; width: 320px; height: 100%; background: #0f0f0f; z-index: 1000; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); padding: 25px; box-sizing: border-box; border-right: 1px solid #333; overflow-y: auto; }
         .sidebar.active { transform: translateX(320px); }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 999; backdrop-filter: blur(4px); }
@@ -34,16 +30,18 @@
         .card { width: 100%; margin-bottom: 20px; border-radius: 20px; padding: 22px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.05); }
         .unpaid { background: var(--card-unpaid); }
         .paid { background: var(--card-paid); }
-        .debit { background: var(--card-debit); }
+        
+        .debit-mini-card { background: var(--card-debit); padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #333; }
         
         .vault-box { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin: 12px 0; font-family: 'Courier New', monospace; border: 1px solid rgba(255,255,255,0.1); }
         .card-num-text { font-size: 17px; letter-spacing: 2px; display: block; margin-bottom: 8px; }
 
         button { padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; font-size: 14px; margin-top: 10px; }
         .btn-main { background: #fff; color: #000; }
-        .btn-sync { background: #4285F4; color: white; }
+        .btn-sync { background: #4285F4; color: white; margin-bottom: 10px; }
         input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; }
         hr { border: 0; border-top: 1px solid #222; margin: 25px 0; }
+        .section-label { color: var(--accent); font-size: 11px; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -51,15 +49,10 @@
     <header>
         <div class="menu-btn" onclick="toggleMenu()">☰</div>
         <div>
-            <div class="app-title">ELITE WALLET</div>
+            <div class="app-title">ELITE 20 WALLET</div>
             <div class="by-line">BY AMRIT KAR</div>
         </div>
     </header>
-
-    <div class="tabs">
-        <div id="tab-credit" class="tab active" onclick="switchTab('credit')">CREDIT</div>
-        <div id="tab-debit" class="tab" onclick="switchTab('debit')">DEBIT</div>
-    </div>
 
     <div class="overlay" onclick="toggleMenu()"></div>
 
@@ -72,13 +65,20 @@
 
         <hr>
 
-        <div style="color:#fff; font-size:11px; font-weight:bold; margin-bottom:12px;">CLOUD SYNC</div>
+        <div class="section-label" style="color:white;">Cloud Sync</div>
         <button class="btn-sync" onclick="alert('Uploading Vault to Google Drive...')">☁️ Backup Data</button>
         <button class="btn-sync" style="background:#34A853;" onclick="alert('Restoring Vault from Drive...')">🔄 Restore Data</button>
 
         <hr>
         
-        <div style="color:var(--accent); font-size:11px; font-weight:bold; margin-bottom:12px;">ADD CREDIT CARD</div>
+        <div class="section-label">Debit Card Vault</div>
+        <div id="debit-list-sidebar">
+            </div>
+        <button style="background:var(--debit-accent); color:white; font-size:11px;" onclick="showAddForm('debit')">+ Add New Debit Card</button>
+
+        <hr>
+
+        <div class="section-label">Add Credit Card</div>
         <input type="text" id="c-bank" placeholder="Bank Name">
         <input type="text" id="c-num" placeholder="Full Card Number">
         <div style="display:flex; gap:10px;">
@@ -89,34 +89,31 @@
         <input type="number" id="c-day" placeholder="Stmt Date (1-31)">
         <button style="background:var(--accent); color:black;" onclick="addNewCard('credit')">SAVE CREDIT CARD</button>
 
-        <hr>
-
-        <div style="color:var(--debit-accent); font-size:11px; font-weight:bold; margin-bottom:12px;">ADD DEBIT CARD</div>
-        <input type="text" id="d-bank" placeholder="Bank Name">
-        <input type="text" id="d-num" placeholder="Full Card Number">
-        <div style="display:flex; gap:10px;">
-            <input type="text" id="d-exp" placeholder="MM/YY">
-            <input type="text" id="d-cvv" placeholder="CVV">
+        <div id="debit-form" style="display:none; margin-top:20px;">
+            <div class="section-label" style="color:var(--debit-accent);">New Debit Card Details</div>
+            <input type="text" id="d-bank" placeholder="Bank Name">
+            <input type="text" id="d-num" placeholder="Full Card Number">
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="d-exp" placeholder="MM/YY">
+                <input type="text" id="d-cvv" placeholder="CVV">
+            </div>
+            <button style="background:var(--debit-accent); color:white;" onclick="addNewCard('debit')">CONFIRM DEBIT CARD</button>
+            <button style="background:none; color:grey; font-size:10px;" onclick="showAddForm('credit')">Cancel</button>
         </div>
-        <button style="background:var(--debit-accent); color:white;" onclick="addNewCard('debit')">SAVE DEBIT CARD</button>
     </div>
 
-    <div class="container" id="card-list"></div>
+    <div class="container" id="credit-list-main"></div>
 
     <script>
-        let walletData = JSON.parse(localStorage.getItem('EliteV32_Final')) || { credit: [], debit: [] };
-        let activeTab = 'credit';
+        let walletData = JSON.parse(localStorage.getItem('EliteV33_Serial')) || { credit: [], debit: [] };
 
         function toggleMenu() {
             document.getElementById('sidebar').classList.toggle('active');
             document.querySelector('.overlay').classList.toggle('active');
         }
 
-        function switchTab(t) {
-            activeTab = t;
-            document.getElementById('tab-credit').className = 'tab' + (t === 'credit' ? ' active' : '');
-            document.getElementById('tab-debit').className = 'tab' + (t === 'debit' ? ' active-debit' : '');
-            render();
+        function showAddForm(type) {
+            document.getElementById('debit-form').style.display = (type === 'debit' ? 'block' : 'none');
         }
 
         function handleLogin(r) { 
@@ -133,7 +130,6 @@
             const cvv = document.getElementById(pfx + 'cvv').value;
 
             if(!bank || !num) return alert("Fill required details!");
-
             let card = { bank, num, exp, cvv, last4: num.slice(-4) };
 
             if(type === 'credit') {
@@ -143,10 +139,11 @@
                 walletData.credit.push(card);
             } else {
                 walletData.debit.push(card);
+                showAddForm('credit');
             }
 
             saveAndRefresh();
-            toggleMenu();
+            if(type === 'credit') toggleMenu();
             document.querySelectorAll('input').forEach(i => i.value = '');
         }
 
@@ -154,7 +151,6 @@
             const thisMonth = new Date().getMonth();
             const card = walletData.credit[i];
             const isPaid = card.lastPaidMonth === thisMonth;
-            
             card.lastPaidMonth = isPaid ? -1 : thisMonth;
             if (!isPaid) {
                 const d = new Date();
@@ -164,65 +160,58 @@
         }
 
         function saveAndRefresh() {
-            localStorage.setItem('EliteV32_Final', JSON.stringify(walletData));
+            localStorage.setItem('EliteV33_Serial', JSON.stringify(walletData));
             render();
         }
 
         function render() {
-            const list = document.getElementById('card-list');
-            list.innerHTML = '';
-            const items = walletData[activeTab];
+            // RENDER MAIN CREDIT LIST
+            const mainList = document.getElementById('credit-list-main');
+            mainList.innerHTML = '';
             const today = new Date().getDate();
             const thisMonth = new Date().getMonth();
 
-            if(items.length === 0) {
-                list.innerHTML = `<div style="text-align:center; color:#333; margin-top:80px;">Empty Vault</div>`;
-                return;
-            }
-
-            items.forEach((c, i) => {
+            walletData.credit.forEach((c, i) => {
+                const isPaid = c.lastPaidMonth === thisMonth;
+                const isDue = today >= c.day;
+                const diff = c.day - today;
+                const isUpcoming = (diff <= 5 && diff > 0);
                 const div = document.createElement('div');
-                const isCredit = activeTab === 'credit';
-                
-                if(isCredit) {
-                    const isPaid = c.lastPaidMonth === thisMonth;
-                    const isDue = today >= c.day;
-                    const diff = c.day - today;
-                    const isUpcoming = (diff <= 5 && diff > 0);
-                    div.className = `card ${isPaid ? 'paid' : 'unpaid'}`;
-                    
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.7;"><span>CREDIT</span><span>XXXX ${c.last4}</span></div>
-                        <div style="font-size:24px; font-weight:900; margin:5px 0;">${c.bank.toUpperCase()}</div>
-                        <div class="vault-box">
-                            <span class="card-num-text">${c.num.replace(/(\d{4})/g, '$1 ')}</span>
-                            <span style="font-size:11px; color:#ccc;">EXP: ${c.exp} | CVV: ${c.cvv}</span>
-                        </div>
-                        <div style="font-size:11px; font-weight:bold;">
-                            ${isPaid ? '✅ PAID: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING ('+diff+'d)' : '⏳ PENDING'))}
-                        </div>
-                        <div style="font-size:11px; opacity:0.8; margin-top:5px;">LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th</div>
-                        <button class="btn-main" onclick="togglePaid(${i})">${isPaid ? 'RESET' : 'MARK PAID'}</button>
-                    `;
-                } else {
-                    div.className = `card debit`;
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.7;"><span>DEBIT</span><span>XXXX ${c.last4}</span></div>
-                        <div style="font-size:24px; font-weight:900; margin:5px 0;">${c.bank.toUpperCase()}</div>
-                        <div class="vault-box">
-                            <span class="card-num-text">${c.num.replace(/(\d{4})/g, '$1 ')}</span>
-                            <span style="font-size:11px; color:#ccc;">EXP: ${c.exp} | CVV: ${c.cvv}</span>
-                        </div>
-                        <button class="btn-main" style="background:var(--debit-accent); color:white;" onclick="alert('Number: ${c.num}\\nCVV: ${c.cvv}')">VIEW VAULT INFO</button>
-                    `;
-                }
-                
-                const del = document.createElement('button');
-                del.style = "background:none; color:rgba(255,255,255,0.2); font-size:10px; border:1px solid rgba(255,255,255,0.05); margin-top:10px;";
-                del.innerText = "Remove Card";
-                del.onclick = () => { if(confirm('Delete?')){ walletData[activeTab].splice(i,1); saveAndRefresh(); }};
-                div.appendChild(del);
-                list.appendChild(div);
+                div.className = `card ${isPaid ? 'paid' : 'unpaid'}`;
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.7;">
+                        <span>CREDIT CARD ${i+1}</span>
+                        <span>XXXX ${c.last4}</span>
+                    </div>
+                    <div style="font-size:24px; font-weight:900; margin:5px 0;">${c.bank.toUpperCase()}</div>
+                    <div class="vault-box">
+                        <span class="card-num-text">${c.num.replace(/(\d{4})/g, '$1 ')}</span>
+                        <span style="font-size:11px; color:#ccc;">EXP: ${c.exp} | CVV: ${c.cvv}</span>
+                    </div>
+                    <div style="font-size:11px; font-weight:bold;">
+                        ${isPaid ? '✅ PAID: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING ('+diff+'d)' : '⏳ PENDING'))}
+                    </div>
+                    <div style="font-size:11px; opacity:0.8; margin-top:5px;">LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th</div>
+                    <button class="btn-main" onclick="togglePaid(${i})">${isPaid ? 'RESET' : 'MARK PAID'}</button>
+                    <button style="background:none; color:rgba(255,255,255,0.2); font-size:9px; border:none; margin-top:10px; text-decoration:underline;" onclick="if(confirm('Delete?')){ walletData.credit.splice(${i},1); saveAndRefresh(); }">Remove Card</button>
+                `;
+                mainList.appendChild(div);
+            });
+
+            // RENDER SIDEBAR DEBIT LIST
+            const sidebarList = document.getElementById('debit-list-sidebar');
+            sidebarList.innerHTML = '';
+            walletData.debit.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.className = 'debit-mini-card';
+                div.innerHTML = `
+                    <div style="font-size:9px; color:var(--debit-accent); font-weight:bold;">DEBIT CARD ${i+1}</div>
+                    <div style="font-size:14px; font-weight:bold; margin:3px 0;">${c.bank.toUpperCase()}</div>
+                    <div style="font-size:11px; font-family:monospace; color:#aaa;">${c.num.replace(/(\d{4})/g, '$1 ')}</div>
+                    <div style="font-size:10px; color:#666;">EXP: ${c.exp} | CVV: ${c.cvv}</div>
+                    <button style="background:none; color:red; font-size:9px; padding:0; margin-top:5px; text-align:left;" onclick="if(confirm('Delete?')){ walletData.debit.splice(${i},1); saveAndRefresh(); }">Remove</button>
+                `;
+                sidebarList.appendChild(div);
             });
         }
         render();
