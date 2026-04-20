@@ -11,7 +11,7 @@
             --debit-accent: #00d4ff; 
             --card-unpaid: linear-gradient(135deg, #7b0000 0%, #cc0000 100%); 
             --card-paid: linear-gradient(135deg, #004d00 0%, #008000 100%); 
-            --card-debit: #1a1a1a; 
+            --card-debit: linear-gradient(135deg, #002d4d 0%, #005696 100%); 
         }
         body { font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--main-bg); color: white; overflow-x: hidden; }
 
@@ -30,14 +30,14 @@
         .card { width: 100%; margin-bottom: 20px; border-radius: 20px; padding: 22px; position: relative; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.05); }
         .unpaid { background: var(--card-unpaid); }
         .paid { background: var(--card-paid); }
-        
-        .debit-mini-card { background: var(--card-debit); padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #333; }
+        .debit { background: var(--card-debit); }
         
         .vault-box { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 15px; margin: 12px 0; font-family: 'Courier New', monospace; border: 1px solid rgba(255,255,255,0.1); }
         .card-num-text { font-size: 17px; letter-spacing: 2px; display: block; margin-bottom: 8px; }
 
         button { padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; font-size: 14px; margin-top: 10px; }
         .btn-main { background: #fff; color: #000; }
+        .btn-menu-nav { background: #1a1a1a; color: white; text-align: left; border: 1px solid #333; margin-bottom: 5px; }
         .btn-sync { background: #4285F4; color: white; margin-bottom: 10px; }
         input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; }
         hr { border: 0; border-top: 1px solid #222; margin: 25px 0; }
@@ -49,7 +49,7 @@
     <header>
         <div class="menu-btn" onclick="toggleMenu()">☰</div>
         <div>
-            <div class="app-title">ELITE 20 WALLET</div>
+            <div class="app-title" id="header-title">CREDIT DASHBOARD</div>
             <div class="by-line">BY AMRIT KAR</div>
         </div>
     </header>
@@ -59,6 +59,12 @@
     <div class="sidebar" id="sidebar">
         <div style="font-size: 18px; font-weight: bold; color: var(--accent); margin-bottom: 20px;">Control Center</div>
         
+        <div class="section-label" style="color:white;">Navigation</div>
+        <button class="btn-menu-nav" onclick="switchView('credit')">💳 View Credit Cards</button>
+        <button class="btn-menu-nav" onclick="switchView('debit')">🏧 View Debit Vault</button>
+
+        <hr>
+
         <div id="g_id_onload" data-client_id="201507687807-o1ko23rr5j1odmibsa24vgn6gci61j8l.apps.googleusercontent.com" data-callback="handleLogin"></div>
         <div class="g_id_signin" data-type="standard"></div>
         <div id="user-status" style="margin-top:10px; font-size:12px; color:#ff4d4d;">Status: Offline</div>
@@ -66,54 +72,45 @@
         <hr>
 
         <div class="section-label" style="color:white;">Cloud Sync</div>
-        <button class="btn-sync" onclick="alert('Uploading Vault to Google Drive...')">☁️ Backup Data</button>
-        <button class="btn-sync" style="background:#34A853;" onclick="alert('Restoring Vault from Drive...')">🔄 Restore Data</button>
+        <button class="btn-sync" onclick="alert('Syncing...')">☁️ Backup Data</button>
+        <button class="btn-sync" style="background:#34A853;" onclick="alert('Restoring...')">🔄 Restore Data</button>
 
         <hr>
         
-        <div class="section-label">Debit Card Vault</div>
-        <div id="debit-list-sidebar">
-            </div>
-        <button style="background:var(--debit-accent); color:white; font-size:11px;" onclick="showAddForm('debit')">+ Add New Debit Card</button>
-
-        <hr>
-
-        <div class="section-label">Add Credit Card</div>
-        <input type="text" id="c-bank" placeholder="Bank Name">
-        <input type="text" id="c-num" placeholder="Full Card Number">
+        <div class="section-label">Add New Card</div>
+        <select id="card-type-select" style="width:100%; padding:12px; background:#1a1a1a; color:white; border-radius:10px; border:1px solid #333; margin-bottom:10px;">
+            <option value="credit">Credit Card</option>
+            <option value="debit">Debit Card</option>
+        </select>
+        <input type="text" id="bank" placeholder="Bank Name">
+        <input type="text" id="num" placeholder="Full Card Number">
         <div style="display:flex; gap:10px;">
-            <input type="text" id="c-exp" placeholder="MM/YY">
-            <input type="text" id="c-cvv" placeholder="CVV">
+            <input type="text" id="exp" placeholder="MM/YY">
+            <input type="text" id="cvv" placeholder="CVV">
         </div>
-        <input type="number" id="c-limit" placeholder="Limit">
-        <input type="number" id="c-day" placeholder="Stmt Date (1-31)">
-        <button style="background:var(--accent); color:black;" onclick="addNewCard('credit')">SAVE CREDIT CARD</button>
-
-        <div id="debit-form" style="display:none; margin-top:20px;">
-            <div class="section-label" style="color:var(--debit-accent);">New Debit Card Details</div>
-            <input type="text" id="d-bank" placeholder="Bank Name">
-            <input type="text" id="d-num" placeholder="Full Card Number">
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="d-exp" placeholder="MM/YY">
-                <input type="text" id="d-cvv" placeholder="CVV">
-            </div>
-            <button style="background:var(--debit-accent); color:white;" onclick="addNewCard('debit')">CONFIRM DEBIT CARD</button>
-            <button style="background:none; color:grey; font-size:10px;" onclick="showAddForm('credit')">Cancel</button>
+        <div id="credit-only-fields">
+            <input type="number" id="limit" placeholder="Limit">
+            <input type="number" id="day" placeholder="Stmt Date (1-31)">
         </div>
+        <button style="background:var(--accent); color:black;" onclick="saveNewCard()">SAVE TO VAULT</button>
     </div>
 
-    <div class="container" id="credit-list-main"></div>
+    <div class="container" id="main-list"></div>
 
     <script>
-        let walletData = JSON.parse(localStorage.getItem('EliteV33_Serial')) || { credit: [], debit: [] };
+        let walletData = JSON.parse(localStorage.getItem('EliteV34_Switch')) || { credit: [], debit: [] };
+        let currentView = 'credit';
 
         function toggleMenu() {
             document.getElementById('sidebar').classList.toggle('active');
             document.querySelector('.overlay').classList.toggle('active');
         }
 
-        function showAddForm(type) {
-            document.getElementById('debit-form').style.display = (type === 'debit' ? 'block' : 'none');
+        function switchView(type) {
+            currentView = type;
+            document.getElementById('header-title').innerText = type.toUpperCase() + (type === 'credit' ? ' DASHBOARD' : ' VAULT');
+            toggleMenu();
+            render();
         }
 
         function handleLogin(r) { 
@@ -122,28 +119,32 @@
             document.getElementById('user-status').style.color = "var(--accent)";
         }
 
-        function addNewCard(type) {
-            const pfx = type === 'credit' ? 'c-' : 'd-';
-            const bank = document.getElementById(pfx + 'bank').value;
-            const num = document.getElementById(pfx + 'num').value;
-            const exp = document.getElementById(pfx + 'exp').value;
-            const cvv = document.getElementById(pfx + 'cvv').value;
+        document.getElementById('card-type-select').addEventListener('change', (e) => {
+            document.getElementById('credit-only-fields').style.display = (e.target.value === 'credit' ? 'block' : 'none');
+        });
+
+        function saveNewCard() {
+            const type = document.getElementById('card-type-select').value;
+            const bank = document.getElementById('bank').value;
+            const num = document.getElementById('num').value;
+            const exp = document.getElementById('exp').value;
+            const cvv = document.getElementById('cvv').value;
 
             if(!bank || !num) return alert("Fill required details!");
             let card = { bank, num, exp, cvv, last4: num.slice(-4) };
 
             if(type === 'credit') {
-                card.limit = document.getElementById('c-limit').value;
-                card.day = parseInt(document.getElementById('c-day').value);
+                card.limit = document.getElementById('limit').value;
+                card.day = parseInt(document.getElementById('day').value);
                 card.lastPaidMonth = -1;
                 walletData.credit.push(card);
             } else {
                 walletData.debit.push(card);
-                showAddForm('credit');
             }
 
-            saveAndRefresh();
-            if(type === 'credit') toggleMenu();
+            localStorage.setItem('EliteV34_Switch', JSON.stringify(walletData));
+            render();
+            toggleMenu();
             document.querySelectorAll('input').forEach(i => i.value = '');
         }
 
@@ -156,62 +157,61 @@
                 const d = new Date();
                 card.paidDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
             }
-            saveAndRefresh();
-        }
-
-        function saveAndRefresh() {
-            localStorage.setItem('EliteV33_Serial', JSON.stringify(walletData));
+            localStorage.setItem('EliteV34_Switch', JSON.stringify(walletData));
             render();
         }
 
         function render() {
-            // RENDER MAIN CREDIT LIST
-            const mainList = document.getElementById('credit-list-main');
-            mainList.innerHTML = '';
+            const list = document.getElementById('main-list');
+            list.innerHTML = '';
+            const items = walletData[currentView];
             const today = new Date().getDate();
             const thisMonth = new Date().getMonth();
 
-            walletData.credit.forEach((c, i) => {
-                const isPaid = c.lastPaidMonth === thisMonth;
-                const isDue = today >= c.day;
-                const diff = c.day - today;
-                const isUpcoming = (diff <= 5 && diff > 0);
-                const div = document.createElement('div');
-                div.className = `card ${isPaid ? 'paid' : 'unpaid'}`;
-                div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.7;">
-                        <span>CREDIT CARD ${i+1}</span>
-                        <span>XXXX ${c.last4}</span>
-                    </div>
-                    <div style="font-size:24px; font-weight:900; margin:5px 0;">${c.bank.toUpperCase()}</div>
-                    <div class="vault-box">
-                        <span class="card-num-text">${c.num.replace(/(\d{4})/g, '$1 ')}</span>
-                        <span style="font-size:11px; color:#ccc;">EXP: ${c.exp} | CVV: ${c.cvv}</span>
-                    </div>
-                    <div style="font-size:11px; font-weight:bold;">
-                        ${isPaid ? '✅ PAID: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING ('+diff+'d)' : '⏳ PENDING'))}
-                    </div>
-                    <div style="font-size:11px; opacity:0.8; margin-top:5px;">LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th</div>
-                    <button class="btn-main" onclick="togglePaid(${i})">${isPaid ? 'RESET' : 'MARK PAID'}</button>
-                    <button style="background:none; color:rgba(255,255,255,0.2); font-size:9px; border:none; margin-top:10px; text-decoration:underline;" onclick="if(confirm('Delete?')){ walletData.credit.splice(${i},1); saveAndRefresh(); }">Remove Card</button>
-                `;
-                mainList.appendChild(div);
-            });
+            if(items.length === 0) {
+                list.innerHTML = `<div style="text-align:center; color:#333; margin-top:80px;">No ${currentView} cards found</div>`;
+                return;
+            }
 
-            // RENDER SIDEBAR DEBIT LIST
-            const sidebarList = document.getElementById('debit-list-sidebar');
-            sidebarList.innerHTML = '';
-            walletData.debit.forEach((c, i) => {
+            items.forEach((c, i) => {
                 const div = document.createElement('div');
-                div.className = 'debit-mini-card';
-                div.innerHTML = `
-                    <div style="font-size:9px; color:var(--debit-accent); font-weight:bold;">DEBIT CARD ${i+1}</div>
-                    <div style="font-size:14px; font-weight:bold; margin:3px 0;">${c.bank.toUpperCase()}</div>
-                    <div style="font-size:11px; font-family:monospace; color:#aaa;">${c.num.replace(/(\d{4})/g, '$1 ')}</div>
-                    <div style="font-size:10px; color:#666;">EXP: ${c.exp} | CVV: ${c.cvv}</div>
-                    <button style="background:none; color:red; font-size:9px; padding:0; margin-top:5px; text-align:left;" onclick="if(confirm('Delete?')){ walletData.debit.splice(${i},1); saveAndRefresh(); }">Remove</button>
-                `;
-                sidebarList.appendChild(div);
+                if(currentView === 'credit') {
+                    const isPaid = c.lastPaidMonth === thisMonth;
+                    const isDue = today >= c.day;
+                    const diff = c.day - today;
+                    const isUpcoming = (diff <= 5 && diff > 0);
+                    div.className = `card ${isPaid ? 'paid' : 'unpaid'}`;
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.7;"><span>CREDIT CARD ${i+1}</span><span>XXXX ${c.last4}</span></div>
+                        <div style="font-size:24px; font-weight:900; margin:5px 0;">${c.bank.toUpperCase()}</div>
+                        <div class="vault-box">
+                            <span class="card-num-text">${c.num.replace(/(\d{4})/g, '$1 ')}</span>
+                            <span style="font-size:11px; color:#ccc;">EXP: ${c.exp} | CVV: ${c.cvv}</span>
+                        </div>
+                        <div style="font-size:11px; font-weight:bold;">
+                            ${isPaid ? '✅ PAID: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING ('+diff+'d)' : '⏳ PENDING'))}
+                        </div>
+                        <div style="font-size:11px; opacity:0.8; margin-top:5px;">LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th</div>
+                        <button class="btn-main" onclick="togglePaid(${i})">${isPaid ? 'RESET' : 'MARK PAID'}</button>
+                    `;
+                } else {
+                    div.className = `card debit`;
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.7;"><span>DEBIT CARD ${i+1}</span><span>XXXX ${c.last4}</span></div>
+                        <div style="font-size:24px; font-weight:900; margin:5px 0;">${c.bank.toUpperCase()}</div>
+                        <div class="vault-box">
+                            <span class="card-num-text">${c.num.replace(/(\d{4})/g, '$1 ')}</span>
+                            <span style="font-size:11px; color:#ccc;">EXP: ${c.exp} | CVV: ${c.cvv}</span>
+                        </div>
+                        <button class="btn-main" style="background:var(--debit-accent); color:white;" onclick="alert('Full Num: ${c.num}\\nCVV: ${c.cvv}')">VIEW FULL VAULT INFO</button>
+                    `;
+                }
+                const del = document.createElement('button');
+                del.style = "background:none; color:rgba(255,255,255,0.1); font-size:9px; border:none; margin-top:10px; text-decoration:underline;";
+                del.innerText = "Delete Card";
+                del.onclick = () => { if(confirm('Delete?')){ walletData[currentView].splice(i,1); localStorage.setItem('EliteV34_Switch', JSON.stringify(walletData)); render(); }};
+                div.appendChild(del);
+                list.appendChild(div);
             });
         }
         render();
