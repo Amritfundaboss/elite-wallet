@@ -24,11 +24,11 @@
         .paid { background: var(--card-paid); }
         
         .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .bank-logo { width: 35px; height: 35px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; border: 1px solid rgba(255,255,255,0.2); }
-        .card-digits { font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        .bank-logo { width: 38px; height: 38px; background: rgba(255,255,255,0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; border: 1px solid rgba(255,255,255,0.15); color: var(--accent); }
+        .card-digits { font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.25); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
         
         button { padding: 14px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; font-size: 14px; }
-        .btn-action { background: #fff; color: #000; margin-top: 15px; }
+        .btn-action { background: #fff; color: #000; margin-top: 15px; border-radius: 10px; }
         input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 10px; border: 1px solid #333; background: #1a1a1a; color: white; box-sizing: border-box; font-size: 14px; }
     </style>
 </head>
@@ -45,21 +45,21 @@
     <div class="overlay" onclick="toggleMenu()"></div>
 
     <div class="sidebar" id="sidebar">
-        <div style="font-size: 20px; font-weight: bold; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 10px; color: var(--accent);">Control Center</div>
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 25px; color: var(--accent);">Control Center</div>
         <div id="g_id_onload" data-client_id="201507687807-o1ko23rr5j1odmibsa24vgn6gci61j8l.apps.googleusercontent.com" data-callback="onLogin"></div>
         <div class="g_id_signin" data-type="standard" data-theme="dark"></div>
-        <hr style="border:0; border-top:1px solid #222; margin:25px 0;">
-        <input type="text" id="bank" placeholder="Bank Name (e.g. Axis)">
+        <hr style="border:0; border-top:1px solid #222; margin:20px 0;">
+        <input type="text" id="bank" placeholder="Bank Name (Axis, SBI...)">
         <input type="number" id="last4" placeholder="Last 4 Digits">
         <input type="number" id="limit" placeholder="Credit Limit">
-        <input type="number" id="day" placeholder="Stmt Day (1-31)">
+        <input type="number" id="day" placeholder="Stmt Date (1-31)">
         <button style="background:var(--accent); color:black;" onclick="addCard()">+ REGISTER CARD</button>
     </div>
 
     <div class="container" id="list"></div>
 
     <script>
-        let cards = JSON.parse(localStorage.getItem('EliteV26_Logo')) || [];
+        let cards = JSON.parse(localStorage.getItem('EliteV27_Pure')) || [];
         const today = new Date().getDate();
         const thisMonth = new Date().getMonth();
 
@@ -82,6 +82,7 @@
                 cards.push({ bank, last4, limit, day, lastPaidMonth: -1, paidDate: "" });
                 save();
                 toggleMenu();
+                document.querySelectorAll('input').forEach(i => i.value = '');
             }
         }
 
@@ -95,16 +96,16 @@
             save();
         }
 
-        function save() { localStorage.setItem('EliteV26_Logo', JSON.stringify(cards)); render(); }
+        function save() { localStorage.setItem('EliteV27_Pure', JSON.stringify(cards)); render(); }
 
         function render() {
             const list = document.getElementById('list');
             list.innerHTML = '';
             cards.forEach((c, i) => {
-                const isPaid = cards[i].lastPaidMonth === thisMonth;
+                const isPaid = c.lastPaidMonth === thisMonth;
                 const isDue = today >= c.day;
-                // Logic for "Upcoming" (if statement is in next 5 days)
-                const isUpcoming = (c.day - today <= 5 && c.day - today > 0);
+                const diff = c.day - today;
+                const isUpcoming = (diff <= 5 && diff > 0);
                 
                 const div = document.createElement('div');
                 div.className = `card ${isPaid ? 'paid' : 'unpaid'}`;
@@ -116,13 +117,13 @@
                     </div>
                     <div style="font-size:24px; font-weight:900; text-transform:uppercase;">${c.bank}</div>
                     <div style="font-size:11px; font-weight:bold; margin-top:8px;">
-                        ${isPaid ? '✅ SETTLED: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING' : '⏳ PENDING'))}
+                        ${isPaid ? '✅ SETTLED: ' + c.paidDate : (isDue ? '🚨 BILL GENERATED' : (isUpcoming ? '⌛ UPCOMING ('+diff+'d)' : '⏳ PENDING'))}
                     </div>
-                    <div style="font-size:12px; border-top:1px solid rgba(255,255,255,0.2); padding-top:10px; margin-top:12px;">
+                    <div style="font-size:12px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px; margin-top:12px;">
                         LIMIT: ₹${Number(c.limit).toLocaleString()} | STMT: ${c.day}th
                     </div>
                     <button class="btn-action" onclick="togglePaid(${i})">${isPaid ? 'RESET CYCLE' : 'MARK AS PAID'}</button>
-                    <button style="background:none; color:rgba(255,255,255,0.3); font-size:10px; margin-top:10px; border:1px solid rgba(255,255,255,0.1); padding:5px; border-radius:5px;" onclick="if(confirm('Delete?')){cards.splice(${i},1); save();}">Remove</button>
+                    <button style="background:none; color:rgba(255,255,255,0.3); font-size:10px; margin-top:12px;" onclick="if(confirm('Delete?')){cards.splice(${i},1); save();}">Remove Card</button>
                 `;
                 list.appendChild(div);
             });
