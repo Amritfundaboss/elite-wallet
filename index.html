@@ -10,7 +10,6 @@
             box-sizing: border-box; position: relative;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
-        /* State Colors */
         .paid { background: linear-gradient(135deg, #004d00 0%, #002b00 100%); border: 1px solid #00ff00; }
         .upcoming { background: linear-gradient(135deg, #7a4a00 0%, #4d2e00 100%); border: 1px solid #ffcc00; }
         .unpaid { background: linear-gradient(135deg, #7b0000 0%, #4d0000 100%); border: 1px solid #ff0000; }
@@ -21,19 +20,18 @@
         .pay-time { font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
         .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; }
 
-        /* Sync Section */
         #sync-wrapper { margin-bottom: 15px; }
         #sync-box { 
             display: none; background: #1a1a1a; padding: 15px; border-radius: 12px; 
             margin-top: 10px; border: 1px solid #333; font-size: 12px; 
         }
         .toggle-sync-btn { background: #333; color: #888; border: none; padding: 5px 10px; border-radius: 5px; font-size: 10px; cursor: pointer; }
-        .sync-btn { color: white; border: none; padding: 10px; border-radius: 5px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .sync-btn { color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
         .push { background: #0088cc; }
-        .pull { background: #555; }
+        .pull { background: #5a5a5a; border: 1px solid #777; }
 
         #add-form { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
-        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
         .add-btn { background: #00ff00; color: #000; width: 100%; font-size: 16px; font-weight: bold; border: none; padding: 12px; border-radius: 8px; }
         
         .btn-group { display: flex; gap: 10px; margin-top: 15px; }
@@ -50,16 +48,13 @@
     <div class="footer-sig">by Amrit Kar</div>
 
     <div id="sync-wrapper" style="text-align: right;">
-        <button class="toggle-sync-btn" onclick="toggleSyncPanel()">☁️ SYNC SETTINGS</button>
+        <button class="toggle-sync-btn" onclick="toggleSyncPanel()">☁️ CLOUD SYNC</button>
         <div id="sync-box">
-            <div style="text-align:left;"><strong>☁️ TELEGRAM CLOUD</strong></div>
-            <p style="font-size:10px; color:#888; text-align:left;">Push to save to Telegram. Paste the JSON from your Telegram chat to Pull.</p>
-            <textarea id="pullData" placeholder="Paste data from Telegram here to PULL..." rows="2" style="font-size:10px;"></textarea>
-            <button class="sync-btn pull" onclick="pullDataFromTelegram()">📥 PULL DATA FROM PASTE</button>
-            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-            <input type="password" id="accessKey" placeholder="Secret Access Key for PUSH" style="margin-top:0;">
+            <div style="text-align:left; margin-bottom: 10px;"><strong>🔐 ACCESS CONSOLE</strong></div>
+            <input type="password" id="accessKey" placeholder="Enter Secret Key (e.g. Amrit2026)">
+            <button class="sync-btn pull" onclick="autoPull()">📥 AUTO-PULL FROM CLOUD</button>
             <button class="sync-btn push" onclick="syncData()">📤 PUSH DATA TO CLOUD</button>
-            <div id="sync-status" style="margin-top:8px; color:#888; font-size:10px; text-align:center;">Status: Ready</div>
+            <div id="sync-status" style="margin-top:12px; color:#aaa; font-size:10px; text-align:center;">Status: Standby</div>
         </div>
     </div>
 
@@ -73,59 +68,78 @@
     <div id="list"></div>
 
     <script>
-        // CONFIGURATION
+        // YOUR CONFIGURATION
         const TG_TOKEN = "8798009505:AAHKQiYiP6Ry58l4IvxTvfy8DWwASy8-B5k";
         const TG_CHAT_ID = "1583362427";
         
-        let cards = JSON.parse(localStorage.getItem('eliteTrackerV12')) || [];
+        let cards = JSON.parse(localStorage.getItem('eliteTrackerV13')) || [];
 
         function toggleSyncPanel() {
             const box = document.getElementById('sync-box');
             box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
         }
 
-        async function syncData() {
+        // AUTO-PULL FEATURE: Fetches the last backup from your Telegram
+        async function autoPull() {
             const key = document.getElementById('accessKey').value;
-            if(!key) return alert("Please enter a Secret Key for this push.");
+            if(!key) return alert("Enter your Secret Key to find your data!");
+            
             const status = document.getElementById('sync-status');
-            status.innerText = "Pushing to Telegram...";
+            status.innerText = "Searching Telegram for backup...";
 
             try {
-                const messageText = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\nDATE: ${new Date().toLocaleString()}\n\nCOPY_THIS_DATA:\n${JSON.stringify(cards)}`;
-                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=-1`);
+                const update = await res.json();
+                
+                // Scan the last few messages for your Key
+                const messages = update.result.reverse();
+                let foundData = null;
+
+                for(let m of messages) {
+                    let text = m.message ? m.message.text : "";
+                    if(text.includes(`KEY: ${key}`)) {
+                        const jsonMatch = text.match(/\[.*\]/);
+                        if(jsonMatch) {
+                            foundData = JSON.parse(jsonMatch[0]);
+                            break;
+                        }
+                    }
+                }
+
+                if(foundData) {
+                    if(confirm(`Found ${foundData.length} cards. Update this device?`)) {
+                        cards = foundData;
+                        save();
+                        status.innerText = "✅ Data Pulled Successfully!";
+                    }
+                } else {
+                    alert("No backup found with that Key. Make sure you 'Pushed' data from your other device first!");
+                    status.innerText = "❌ No data found.";
+                }
+            } catch (e) {
+                alert("Connection Error. Try again in a minute.");
+            }
+        }
+
+        async function syncData() {
+            const key = document.getElementById('accessKey').value;
+            if(!key) return alert("Enter a Secret Key to secure this backup!");
+            const status = document.getElementById('sync-status');
+            status.innerText = "Pushing to Cloud...";
+
+            try {
+                const messageText = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\n\nDATA_START\n${JSON.stringify(cards)}\nDATA_END`;
+                await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ chat_id: TG_CHAT_ID, text: messageText })
                 });
-                if(res.ok) {
-                    status.innerText = "✅ Pushed to Telegram!";
-                    alert("Backup sent! You can now copy that data to any other device.");
-                } else { throw new Error(); }
-            } catch (e) {
-                status.innerText = "❌ Push Failed!";
-            }
+                status.innerText = "✅ Pushed to Telegram!";
+                alert("Cloud Save Successful!");
+            } catch (e) { status.innerText = "❌ Push Failed!"; }
         }
 
-        function pullDataFromTelegram() {
-            const input = document.getElementById('pullData').value;
-            try {
-                const jsonMatch = input.match(/\[.*\]/);
-                if (jsonMatch) {
-                    const importedCards = JSON.parse(jsonMatch[0]);
-                    if(confirm(`Found ${importedCards.length} cards. Overwrite local data?`)) {
-                        cards = importedCards;
-                        save();
-                        document.getElementById('pullData').value = '';
-                        alert("Data Pulled Successfully!");
-                    }
-                } else { alert("Could not find valid card data in your paste."); }
-            } catch (e) { alert("Invalid data format!"); }
-        }
-
-        function save() {
-            localStorage.setItem('eliteTrackerV12', JSON.stringify(cards));
-            render();
-        }
+        function save() { localStorage.setItem('eliteTrackerV13', JSON.stringify(cards)); render(); }
 
         function addCard() {
             const name = document.getElementById('name').value;
@@ -139,8 +153,7 @@
         }
 
         function togglePaid(i) {
-            const now = new Date();
-            const currentMonth = now.getMonth();
+            const now = new Date(); const currentMonth = now.getMonth();
             if (cards[i].lastPaidMonth === currentMonth) {
                 cards[i].lastPaidMonth = -1; cards[i].paidAt = null;
             } else {
@@ -154,9 +167,7 @@
             save();
         }
 
-        function deleteCard(i) {
-            if(confirm("Delete this card?")) { cards.splice(i, 1); save(); }
-        }
+        function deleteCard(i) { if(confirm("Delete this?")) { cards.splice(i, 1); save(); } }
 
         function render() {
             const list = document.getElementById('list');
@@ -174,8 +185,7 @@
                 else if (daysDiff <= 5 && daysDiff > 0) { status = "upcoming"; label = `UPCOMING (${daysDiff} DAYS LEFT)`; }
                 else { status = "unpaid"; label = "MONTHLY CYCLE (UNPAID)"; }
 
-                const div = document.createElement('div');
-                div.className = `card ${status}`;
+                const div = document.createElement('div'); div.className = `card ${status}`;
                 div.innerHTML = `
                     <div class="card-id-corner">#${i + 1}</div>
                     <div class="status-badge" style="background: rgba(0,0,0,0.5);">${label}</div>
