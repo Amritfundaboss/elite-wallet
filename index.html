@@ -31,7 +31,7 @@
         .pull { background: #5a5a5a; border: 1px solid #777; }
 
         #add-form { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
         .add-btn { background: #00ff00; color: #000; width: 100%; font-size: 16px; font-weight: bold; border: none; padding: 12px; border-radius: 8px; }
         
         .btn-group { display: flex; gap: 10px; margin-top: 15px; }
@@ -51,16 +51,20 @@
         <button class="toggle-sync-btn" onclick="toggleSyncPanel()">☁️ CLOUD SYNC</button>
         <div id="sync-box">
             <div style="text-align:left; margin-bottom: 10px;"><strong>🔐 ACCESS CONSOLE</strong></div>
-            <input type="password" id="accessKey" placeholder="Enter Secret Key (e.g. Amrit2026)">
+            <input type="password" id="accessKey" placeholder="Enter Secret Key (e.g. amrit1234)">
             <button class="sync-btn pull" onclick="autoPull()">📥 AUTO-PULL FROM CLOUD</button>
             <button class="sync-btn push" onclick="syncData()">📤 PUSH DATA TO CLOUD</button>
+            <hr style="border-top: 1px solid #333; margin: 15px 0;">
+            <p style="text-align:left; font-size: 10px; color: #777;">Manual Recovery (Paste your Telegram data here):</p>
+            <textarea id="manualPaste" rows="2" placeholder="Paste [ { ... } ] here"></textarea>
+            <button class="sync-btn" style="background:#444;" onclick="manualImport()">🛠️ MANUAL IMPORT</button>
             <div id="sync-status" style="margin-top:12px; color:#aaa; font-size:10px; text-align:center;">Status: Standby</div>
         </div>
     </div>
 
     <div id="add-form">
         <input type="text" id="name" placeholder="Bank/Card Name">
-        <input type="number" id="limit" placeholder="Limit (e.g. 50000)">
+        <input type="number" id="limit" placeholder="Limit">
         <input type="number" id="day" placeholder="Billing Day (1-31)">
         <button class="add-btn" onclick="addCard()">ADD CARD</button>
     </div>
@@ -68,37 +72,38 @@
     <div id="list"></div>
 
     <script>
-        // YOUR CONFIGURATION
         const TG_TOKEN = "8798009505:AAHKQiYiP6Ry58l4IvxTvfy8DWwASy8-B5k";
         const TG_CHAT_ID = "1583362427";
         
-        let cards = JSON.parse(localStorage.getItem('eliteTrackerV13')) || [];
+        let cards = JSON.parse(localStorage.getItem('eliteTrackerV14')) || [];
 
         function toggleSyncPanel() {
             const box = document.getElementById('sync-box');
             box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
         }
 
-        // AUTO-PULL FEATURE: Fetches the last backup from your Telegram
         async function autoPull() {
             const key = document.getElementById('accessKey').value;
-            if(!key) return alert("Enter your Secret Key to find your data!");
-            
+            if(!key) return alert("Enter Secret Key!");
             const status = document.getElementById('sync-status');
-            status.innerText = "Searching Telegram for backup...";
+            status.innerText = "Searching updates...";
 
             try {
-                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=-1`);
+                // We use a large offset to try and catch older messages if needed
+                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates?limit=100&allowed_updates=["message"]`);
                 const update = await res.json();
                 
-                // Scan the last few messages for your Key
-                const messages = update.result.reverse();
-                let foundData = null;
+                if(!update.result || update.result.length === 0) {
+                    alert("No new messages found. If you just sent a message, try clicking Pull again in a moment.");
+                    return;
+                }
 
-                for(let m of messages) {
-                    let text = m.message ? m.message.text : "";
-                    if(text.includes(`KEY: ${key}`)) {
-                        const jsonMatch = text.match(/\[.*\]/);
+                let foundData = null;
+                // Look through the most recent 100 updates
+                for(let i = update.result.length - 1; i >= 0; i--) {
+                    const m = update.result[i].message;
+                    if(m && m.text && m.text.includes(`KEY: ${key}`)) {
+                        const jsonMatch = m.text.match(/\[.*\]/);
                         if(jsonMatch) {
                             foundData = JSON.parse(jsonMatch[0]);
                             break;
@@ -107,98 +112,74 @@
                 }
 
                 if(foundData) {
-                    if(confirm(`Found ${foundData.length} cards. Update this device?`)) {
-                        cards = foundData;
-                        save();
-                        status.innerText = "✅ Data Pulled Successfully!";
+                    if(confirm(`Sync found ${foundData.length} cards. Proceed?`)) {
+                        cards = foundData; save();
+                        status.innerText = "✅ Cloud Pull Success!";
                     }
                 } else {
-                    alert("No backup found with that Key. Make sure you 'Pushed' data from your other device first!");
-                    status.innerText = "❌ No data found.";
+                    alert("No matching backup found with that key in recent history.");
+                    status.innerText = "❌ Backup not found.";
                 }
-            } catch (e) {
-                alert("Connection Error. Try again in a minute.");
-            }
+            } catch (e) { alert("Sync error. Try Manual Import if this persists."); }
+        }
+
+        function manualImport() {
+            const val = document.getElementById('manualPaste').value;
+            const match = val.match(/\[.*\]/);
+            if(match) {
+                cards = JSON.parse(match[0]); save();
+                alert("Manual Import Success!");
+                document.getElementById('manualPaste').value = "";
+            } else { alert("Invalid format. Copy the [...] part from Telegram."); }
         }
 
         async function syncData() {
             const key = document.getElementById('accessKey').value;
-            if(!key) return alert("Enter a Secret Key to secure this backup!");
+            if(!key) return alert("Enter Secret Key!");
             const status = document.getElementById('sync-status');
-            status.innerText = "Pushing to Cloud...";
-
+            status.innerText = "Pushing...";
             try {
-                const messageText = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\n\nDATA_START\n${JSON.stringify(cards)}\nDATA_END`;
+                const text = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\n\nDATA_START\n${JSON.stringify(cards)}\nDATA_END`;
                 await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: TG_CHAT_ID, text: messageText })
+                    body: JSON.stringify({ chat_id: TG_CHAT_ID, text: text })
                 });
                 status.innerText = "✅ Pushed to Telegram!";
-                alert("Cloud Save Successful!");
             } catch (e) { status.innerText = "❌ Push Failed!"; }
         }
 
-        function save() { localStorage.setItem('eliteTrackerV13', JSON.stringify(cards)); render(); }
+        function save() { localStorage.setItem('eliteTrackerV14', JSON.stringify(cards)); render(); }
 
         function addCard() {
-            const name = document.getElementById('name').value;
-            const limit = document.getElementById('limit').value;
-            const day = parseInt(document.getElementById('day').value);
-            if(name && day) {
-                cards.push({ name, limit, day, lastPaidMonth: -1, paidAt: null });
-                save();
-                document.querySelectorAll('#add-form input').forEach(i => i.value = '');
-            }
+            const n = document.getElementById('name').value, l = document.getElementById('limit').value, d = parseInt(document.getElementById('day').value);
+            if(n && d) { cards.push({ name:n, limit:l, day:d, lastPaidMonth:-1, paidAt:null }); save(); document.querySelectorAll('#add-form input').forEach(i => i.value = ''); }
         }
 
         function togglePaid(i) {
-            const now = new Date(); const currentMonth = now.getMonth();
-            if (cards[i].lastPaidMonth === currentMonth) {
-                cards[i].lastPaidMonth = -1; cards[i].paidAt = null;
-            } else {
-                cards[i].lastPaidMonth = currentMonth;
-                const d = String(now.getDate()).padStart(2, '0');
-                const m = String(now.getMonth() + 1).padStart(2, '0');
-                const y = now.getFullYear();
-                const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                cards[i].paidAt = `${d}/${m}/${y} at ${time}`;
+            const now = new Date(), m = now.getMonth();
+            if (cards[i].lastPaidMonth === m) { cards[i].lastPaidMonth = -1; cards[i].paidAt = null; }
+            else {
+                cards[i].lastPaidMonth = m;
+                cards[i].paidAt = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} at ${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
             }
             save();
         }
 
-        function deleteCard(i) { if(confirm("Delete this?")) { cards.splice(i, 1); save(); } }
+        function deleteCard(i) { if(confirm("Delete?")) { cards.splice(i,1); save(); } }
 
         function render() {
-            const list = document.getElementById('list');
-            const todayDay = new Date().getDate();
-            const currentMonth = new Date().getMonth();
+            const list = document.getElementById('list'), today = new Date().getDate(), month = new Date().getMonth();
             list.innerHTML = '';
-
-            cards.forEach((card, i) => {
-                const isPaid = card.lastPaidMonth === currentMonth;
-                const daysDiff = card.day - todayDay;
-                let status = "unpaid"; let label = "UNPAID";
-
-                if (isPaid) { status = "paid"; label = "PAID THIS MONTH"; }
-                else if (todayDay >= card.day) { status = "unpaid"; label = "BILL GENERATED (OVERDUE)"; }
-                else if (daysDiff <= 5 && daysDiff > 0) { status = "upcoming"; label = `UPCOMING (${daysDiff} DAYS LEFT)`; }
-                else { status = "unpaid"; label = "MONTHLY CYCLE (UNPAID)"; }
-
-                const div = document.createElement('div'); div.className = `card ${status}`;
-                div.innerHTML = `
-                    <div class="card-id-corner">#${i + 1}</div>
-                    <div class="status-badge" style="background: rgba(0,0,0,0.5);">${label}</div>
-                    <div style="font-size:18px; font-weight:bold; margin-bottom:8px;">Card Number ${i + 1}</div>
-                    <div class="card-name">${card.name}</div>
-                    <div class="card-info">LIMIT: ₹${Number(card.limit).toLocaleString()}</div>
-                    <div class="card-info">BILLING DATE: ${card.day}th</div>
-                    ${isPaid ? `<div class="pay-time">✅ Paid: ${card.paidAt}</div>` : ''}
-                    <div class="btn-group">
-                        <button class="action btn-pay" onclick="togglePaid(${i})">${isPaid ? 'UNDO' : 'MARK PAID'}</button>
-                        <button class="action btn-del" onclick="deleteCard(${i})">DELETE</button>
-                    </div>
-                `;
+            cards.forEach((c, i) => {
+                const isPaid = c.lastPaidMonth === month;
+                const diff = c.day - today;
+                let s = "unpaid", l = "UNPAID";
+                if (isPaid) { s = "paid"; l = "PAID THIS MONTH"; }
+                else if (today >= c.day) { s = "unpaid"; l = "BILL GENERATED (OVERDUE)"; }
+                else if (diff <= 5 && diff > 0) { s = "upcoming"; l = `UPCOMING (${diff} DAYS LEFT)`; }
+                const div = document.createElement('div'); div.className = `card ${s}`;
+                div.innerHTML = `<div class="card-id-corner">#${i + 1}</div><div class="status-badge" style="background:rgba(0,0,0,0.5);">${l}</div><div style="font-size:18px; font-weight:bold; margin-bottom:8px;">Card Number ${i + 1}</div><div class="card-name">${c.name}</div><div class="card-info">LIMIT: ₹${Number(c.limit).toLocaleString()}</div><div class="card-info">BILLING DATE: ${c.day}th</div>${isPaid ? `<div class="pay-time">✅ Paid: ${c.paidAt}</div>` : ''}<div class="btn-group"><button class="action btn-pay" onclick="togglePaid(${i})">${isPaid ? 'UNDO' : 'MARK PAID'}</button><button class="action btn-del" onclick="deleteCard(${i})">DELETE</button></div>`;
                 list.appendChild(div);
             });
         }
