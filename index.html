@@ -14,8 +14,10 @@
         .upcoming { background: linear-gradient(135deg, #7a4a00 0%, #4d2e00 100%); border: 1px solid #ffcc00; }
         .unpaid { background: linear-gradient(135deg, #7b0000 0%, #4d0000 100%); border: 1px solid #ff0000; }
 
+        /* The small corner ID you like */
         .card-id-corner { position: absolute; top: 15px; right: 20px; font-size: 12px; color: rgba(255,255,255,0.5); }
-        .card-name { font-size: 22px; font-weight: bold; text-transform: uppercase; }
+        
+        .card-name { font-size: 22px; font-weight: bold; text-transform: uppercase; margin-top: 5px; }
         .card-info { font-size: 14px; margin: 5px 0; opacity: 0.9; }
         .pay-time { font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
         .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; }
@@ -66,11 +68,10 @@
     <div id="list"></div>
 
     <script>
-        // UPDATED CONFIGURATION
         const TG_TOKEN = "8798009505:AAHKQiYiP6Ry58l4IvxTvfy8DWwASy8-B5k";
         const TG_CHAT_ID = "1583362427"; 
         
-        let cards = JSON.parse(localStorage.getItem('eliteTrackerV17')) || [];
+        let cards = JSON.parse(localStorage.getItem('eliteTrackerV18')) || [];
 
         function toggleSyncPanel() {
             const box = document.getElementById('sync-box');
@@ -83,7 +84,7 @@
             const status = document.getElementById('sync-status');
             status.innerText = "Pushing...";
             try {
-                // Wrap data in backticks for one-click copy in Telegram
+                // One-click copy formatting with backticks
                 const text = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\n\nONE-CLICK COPY DATA:\n\`${JSON.stringify(cards)}\``;
                 await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                     method: 'POST',
@@ -104,7 +105,7 @@
             } else { alert("Invalid data. Copy the block from Telegram."); }
         }
 
-        function save() { localStorage.setItem('eliteTrackerV17', JSON.stringify(cards)); render(); }
+        function save() { localStorage.setItem('eliteTrackerV18', JSON.stringify(cards)); render(); }
 
         function addCard() {
             const n = document.getElementById('name').value, l = document.getElementById('limit').value, d = parseInt(document.getElementById('day').value);
@@ -133,8 +134,20 @@
                 if (isPaid) { s = "paid"; l = "PAID THIS MONTH"; }
                 else if (today >= c.day) { s = "unpaid"; l = "BILL GENERATED (OVERDUE)"; }
                 else if (diff <= 5 && diff > 0) { s = "upcoming"; l = `UPCOMING (${diff} DAYS LEFT)`; }
+                
                 const div = document.createElement('div'); div.className = `card ${s}`;
-                div.innerHTML = `<div class="card-id-corner">#${i + 1}</div><div class="status-badge" style="background:rgba(0,0,0,0.5);">${l}</div><div style="font-size:18px; font-weight:bold; margin-bottom:8px;">Card Number ${i + 1}</div><div class="card-name">${c.name}</div><div class="card-info">LIMIT: ₹${Number(c.limit).toLocaleString()}</div><div class="card-info">BILLING DATE: ${c.day}th</div>${isPaid ? `<div class="pay-time">✅ Paid: ${c.paidAt}</div>` : ''}<div class="btn-group"><button class="action btn-pay" onclick="togglePaid(${i})">${isPaid ? 'UNDO' : 'MARK PAID'}</button><button class="action btn-del" onclick="deleteCard(${i})">DELETE</button></div>`;
+                div.innerHTML = `
+                    <div class="card-id-corner">#${i + 1}</div>
+                    <div class="status-badge" style="background:rgba(0,0,0,0.5);">${l}</div>
+                    <div class="card-name">${c.name}</div>
+                    <div class="card-info">LIMIT: ₹${Number(c.limit).toLocaleString()}</div>
+                    <div class="card-info">BILLING DATE: ${c.day}th</div>
+                    ${isPaid ? `<div class="pay-time">✅ Paid: ${c.paidAt}</div>` : ''}
+                    <div class="btn-group">
+                        <button class="action btn-pay" onclick="togglePaid(${i})">${isPaid ? 'UNDO' : 'MARK PAID'}</button>
+                        <button class="action btn-del" onclick="deleteCard(${i})">DELETE</button>
+                    </div>
+                `;
                 list.appendChild(div);
             });
         }
