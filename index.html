@@ -25,10 +25,9 @@
         .sync-btn { color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
         .push { background: #0088cc; }
         .pull { background: #5a5a5a; }
-        .copy-raw { background: #444; font-size: 10px; padding: 5px; margin-top: 5px; width: 100%; border: none; color: #aaa; border-radius: 4px; }
 
         #add-form { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
         .add-btn { background: #00ff00; color: #000; width: 100%; font-size: 16px; font-weight: bold; border: none; padding: 12px; border-radius: 8px; }
         
         .btn-group { display: flex; gap: 10px; margin-top: 15px; }
@@ -45,12 +44,14 @@
     <div class="footer-sig">by Amrit Kar</div>
 
     <div id="sync-wrapper" style="text-align: right;">
-        <button class="toggle-sync-btn" onclick="toggleSyncPanel()">☁️ GROUP CLOUD SYNC</button>
+        <button class="toggle-sync-btn" onclick="toggleSyncPanel()">☁️ CLOUD SYNC</button>
         <div id="sync-box">
-            <input type="password" id="accessKey" placeholder="Secret Key">
-            <button class="sync-btn pull" onclick="autoPull()">📥 AUTO-PULL FROM GROUP</button>
-            <button class="sync-btn push" onclick="syncData()">📤 PUSH TO GROUP</button>
-            <button class="copy-raw" onclick="copyRawData()">📋 COPY RAW DATA (JSON)</button>
+            <div style="text-align:left; margin-bottom: 10px;"><strong>🔐 ACCESS CONSOLE</strong></div>
+            <textarea id="manualPaste" rows="2" placeholder="Paste JSON here to pull..."></textarea>
+            <button class="sync-btn pull" onclick="manualImport()">📥 IMPORT DATA FROM PASTE</button>
+            <hr style="border-top: 1px solid #333; margin: 15px 0;">
+            <input type="password" id="accessKey" placeholder="Secret Key for Push">
+            <button class="sync-btn push" onclick="syncData()">📤 PUSH TO TELEGRAM</button>
             <div id="sync-status" style="margin-top:12px; color:#aaa; font-size:10px; text-align:center;">Status: Ready</div>
         </div>
     </div>
@@ -65,70 +66,45 @@
     <div id="list"></div>
 
     <script>
+        // UPDATED CONFIGURATION
         const TG_TOKEN = "8798009505:AAHKQiYiP6Ry58l4IvxTvfy8DWwASy8-B5k";
-        const TG_CHAT_ID = "1003996492657"; 
+        const TG_CHAT_ID = "1583362427"; 
         
-        let cards = JSON.parse(localStorage.getItem('eliteTrackerV16')) || [];
+        let cards = JSON.parse(localStorage.getItem('eliteTrackerV17')) || [];
 
         function toggleSyncPanel() {
             const box = document.getElementById('sync-box');
             box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
         }
 
-        function copyRawData() {
-            navigator.clipboard.writeText(JSON.stringify(cards));
-            alert("Data copied to clipboard!");
-        }
-
-        async function autoPull() {
+        async function syncData() {
             const key = document.getElementById('accessKey').value;
             if(!key) return alert("Enter Secret Key!");
             const status = document.getElementById('sync-status');
-            status.innerText = "Checking Group Updates...";
-
-            try {
-                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/getUpdates`);
-                const update = await res.json();
-                
-                let foundData = null;
-                if(update.result) {
-                    for(let i = update.result.length - 1; i >= 0; i--) {
-                        const m = update.result[i].message || update.result[i].channel_post;
-                        if(m && m.text && m.text.includes(`KEY: ${key}`)) {
-                            const jsonMatch = m.text.match(/\[.*\]/);
-                            if(jsonMatch) { foundData = JSON.parse(jsonMatch[0]); break; }
-                        }
-                    }
-                }
-
-                if(foundData) {
-                    if(confirm(`Found ${foundData.length} cards. Update device?`)) {
-                        cards = foundData; save();
-                        status.innerText = "✅ Last Pulled: " + new Date().toLocaleTimeString();
-                    }
-                } else {
-                    alert("No backup found. Make sure you Pushed from your other device first!");
-                }
-            } catch (e) { alert("Sync error. Check connection."); }
-        }
-
-        async function syncData() {
-            const key = document.getElementById('accessKey').value;
-            if(!key) return alert("Enter Key!");
-            const status = document.getElementById('sync-status');
             status.innerText = "Pushing...";
             try {
-                const text = `🔐 GROUP BACKUP\nKEY: ${key}\n\nDATA:\n${JSON.stringify(cards)}`;
+                // Wrap data in backticks for one-click copy in Telegram
+                const text = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\n\nONE-CLICK COPY DATA:\n\`${JSON.stringify(cards)}\``;
                 await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: TG_CHAT_ID, text: text })
+                    body: JSON.stringify({ chat_id: TG_CHAT_ID, text: text, parse_mode: 'Markdown' })
                 });
-                status.innerText = "✅ Last Pushed: " + new Date().toLocaleTimeString();
+                status.innerText = "✅ Pushed: " + new Date().toLocaleTimeString();
             } catch (e) { status.innerText = "❌ Push Failed!"; }
         }
 
-        function save() { localStorage.setItem('eliteTrackerV16', JSON.stringify(cards)); render(); }
+        function manualImport() {
+            const val = document.getElementById('manualPaste').value;
+            const match = val.match(/\[.*\]/);
+            if(match) {
+                cards = JSON.parse(match[0]); save();
+                alert("Import Success!");
+                document.getElementById('manualPaste').value = "";
+            } else { alert("Invalid data. Copy the block from Telegram."); }
+        }
+
+        function save() { localStorage.setItem('eliteTrackerV17', JSON.stringify(cards)); render(); }
 
         function addCard() {
             const n = document.getElementById('name').value, l = document.getElementById('limit').value, d = parseInt(document.getElementById('day').value);
