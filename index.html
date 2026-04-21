@@ -7,32 +7,33 @@
         body { font-family: 'Segoe UI', sans-serif; padding: 15px; background: #000; color: white; }
         .card { 
             width: 100%; margin-bottom: 15px; border-radius: 15px; padding: 20px;
-            box-sizing: border-box; position: relative; /* Essential for top-right positioning */
+            box-sizing: border-box; position: relative;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
-        
         /* State Colors */
         .paid { background: linear-gradient(135deg, #004d00 0%, #002b00 100%); border: 1px solid #00ff00; }
         .upcoming { background: linear-gradient(135deg, #7a4a00 0%, #4d2e00 100%); border: 1px solid #ffcc00; }
         .unpaid { background: linear-gradient(135deg, #7b0000 0%, #4d0000 100%); border: 1px solid #ff0000; }
 
-        /* Top Right ID Number */
-        .card-id-corner { 
-            position: absolute; 
-            top: 15px; 
-            right: 20px; 
-            font-size: 12px; 
-            color: rgba(255,255,255,0.5); 
-            font-weight: normal; 
-        }
-
+        .card-id-corner { position: absolute; top: 15px; right: 20px; font-size: 12px; color: rgba(255,255,255,0.5); }
         .card-name { font-size: 22px; font-weight: bold; text-transform: uppercase; width: 80%; }
         .card-info { font-size: 14px; margin: 5px 0; opacity: 0.9; }
         .pay-time { font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
         .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-bottom: 10px; }
 
+        /* Sync Section */
+        #sync-wrapper { margin-bottom: 15px; }
+        #sync-box { 
+            display: none; background: #1a1a1a; padding: 15px; border-radius: 12px; 
+            margin-top: 10px; border: 1px solid #333; font-size: 12px; 
+        }
+        .toggle-sync-btn { background: #333; color: #888; border: none; padding: 5px 10px; border-radius: 5px; font-size: 10px; cursor: pointer; }
+        .sync-btn { color: white; border: none; padding: 10px; border-radius: 5px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .push { background: #0088cc; }
+        .pull { background: #555; }
+
         #add-form { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #333; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
+        input, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: white; box-sizing: border-box; }
         .add-btn { background: #00ff00; color: #000; width: 100%; font-size: 16px; font-weight: bold; border: none; padding: 12px; border-radius: 8px; }
         
         .btn-group { display: flex; gap: 10px; margin-top: 15px; }
@@ -48,6 +49,20 @@
     <h2 style="text-align:center; color:#00ff00; margin-bottom: 5px;">💳 ELITE CARD TRACKER</h2>
     <div class="footer-sig">by Amrit Kar</div>
 
+    <div id="sync-wrapper" style="text-align: right;">
+        <button class="toggle-sync-btn" onclick="toggleSyncPanel()">☁️ SYNC SETTINGS</button>
+        <div id="sync-box">
+            <div style="text-align:left;"><strong>☁️ TELEGRAM CLOUD</strong></div>
+            <p style="font-size:10px; color:#888; text-align:left;">Push to save to Telegram. Paste the JSON from your Telegram chat to Pull.</p>
+            <textarea id="pullData" placeholder="Paste data from Telegram here to PULL..." rows="2" style="font-size:10px;"></textarea>
+            <button class="sync-btn pull" onclick="pullDataFromTelegram()">📥 PULL DATA FROM PASTE</button>
+            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            <input type="password" id="accessKey" placeholder="Secret Access Key for PUSH" style="margin-top:0;">
+            <button class="sync-btn push" onclick="syncData()">📤 PUSH DATA TO CLOUD</button>
+            <div id="sync-status" style="margin-top:8px; color:#888; font-size:10px; text-align:center;">Status: Ready</div>
+        </div>
+    </div>
+
     <div id="add-form">
         <input type="text" id="name" placeholder="Bank/Card Name">
         <input type="number" id="limit" placeholder="Limit (e.g. 50000)">
@@ -58,10 +73,57 @@
     <div id="list"></div>
 
     <script>
-        let cards = JSON.parse(localStorage.getItem('eliteTrackerV9')) || [];
+        // CONFIGURATION
+        const TG_TOKEN = "8798009505:AAHKQiYiP6Ry58l4IvxTvfy8DWwASy8-B5k";
+        const TG_CHAT_ID = "1583362427";
+        
+        let cards = JSON.parse(localStorage.getItem('eliteTrackerV12')) || [];
+
+        function toggleSyncPanel() {
+            const box = document.getElementById('sync-box');
+            box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+        }
+
+        async function syncData() {
+            const key = document.getElementById('accessKey').value;
+            if(!key) return alert("Please enter a Secret Key for this push.");
+            const status = document.getElementById('sync-status');
+            status.innerText = "Pushing to Telegram...";
+
+            try {
+                const messageText = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\nDATE: ${new Date().toLocaleString()}\n\nCOPY_THIS_DATA:\n${JSON.stringify(cards)}`;
+                const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: TG_CHAT_ID, text: messageText })
+                });
+                if(res.ok) {
+                    status.innerText = "✅ Pushed to Telegram!";
+                    alert("Backup sent! You can now copy that data to any other device.");
+                } else { throw new Error(); }
+            } catch (e) {
+                status.innerText = "❌ Push Failed!";
+            }
+        }
+
+        function pullDataFromTelegram() {
+            const input = document.getElementById('pullData').value;
+            try {
+                const jsonMatch = input.match(/\[.*\]/);
+                if (jsonMatch) {
+                    const importedCards = JSON.parse(jsonMatch[0]);
+                    if(confirm(`Found ${importedCards.length} cards. Overwrite local data?`)) {
+                        cards = importedCards;
+                        save();
+                        document.getElementById('pullData').value = '';
+                        alert("Data Pulled Successfully!");
+                    }
+                } else { alert("Could not find valid card data in your paste."); }
+            } catch (e) { alert("Invalid data format!"); }
+        }
 
         function save() {
-            localStorage.setItem('eliteTrackerV9', JSON.stringify(cards));
+            localStorage.setItem('eliteTrackerV12', JSON.stringify(cards));
             render();
         }
 
@@ -72,17 +134,15 @@
             if(name && day) {
                 cards.push({ name, limit, day, lastPaidMonth: -1, paidAt: null });
                 save();
-                document.querySelectorAll('input').forEach(i => i.value = '');
+                document.querySelectorAll('#add-form input').forEach(i => i.value = '');
             }
         }
 
         function togglePaid(i) {
             const now = new Date();
             const currentMonth = now.getMonth();
-            
             if (cards[i].lastPaidMonth === currentMonth) {
-                cards[i].lastPaidMonth = -1;
-                cards[i].paidAt = null;
+                cards[i].lastPaidMonth = -1; cards[i].paidAt = null;
             } else {
                 cards[i].lastPaidMonth = currentMonth;
                 const d = String(now.getDate()).padStart(2, '0');
@@ -95,53 +155,37 @@
         }
 
         function deleteCard(i) {
-            if(confirm("Delete this card?")) {
-                cards.splice(i, 1);
-                save();
-            }
+            if(confirm("Delete this card?")) { cards.splice(i, 1); save(); }
         }
 
         function render() {
             const list = document.getElementById('list');
-            const todayDate = new Date();
-            const todayDay = todayDate.getDate();
-            const currentMonth = todayDate.getMonth();
+            const todayDay = new Date().getDate();
+            const currentMonth = new Date().getMonth();
             list.innerHTML = '';
 
             cards.forEach((card, i) => {
                 const isPaid = card.lastPaidMonth === currentMonth;
                 const daysDiff = card.day - todayDay;
-                
-                let status = "unpaid";
-                let label = "UNPAID";
+                let status = "unpaid"; let label = "UNPAID";
 
-                if (isPaid) {
-                    status = "paid";
-                    label = "PAID THIS MONTH";
-                } else if (todayDay >= card.day) {
-                    status = "unpaid";
-                    label = "BILL GENERATED (OVERDUE)";
-                } else if (daysDiff <= 5 && daysDiff > 0) {
-                    status = "upcoming";
-                    label = `UPCOMING (${daysDiff} DAYS LEFT)`;
-                } else {
-                    status = "unpaid";
-                    label = "MONTHLY CYCLE (UNPAID)";
-                }
+                if (isPaid) { status = "paid"; label = "PAID THIS MONTH"; }
+                else if (todayDay >= card.day) { status = "unpaid"; label = "BILL GENERATED (OVERDUE)"; }
+                else if (daysDiff <= 5 && daysDiff > 0) { status = "upcoming"; label = `UPCOMING (${daysDiff} DAYS LEFT)`; }
+                else { status = "unpaid"; label = "MONTHLY CYCLE (UNPAID)"; }
 
                 const div = document.createElement('div');
                 div.className = `card ${status}`;
                 div.innerHTML = `
                     <div class="card-id-corner">#${i + 1}</div>
                     <div class="status-badge" style="background: rgba(0,0,0,0.5);">${label}</div>
+                    <div style="font-size:18px; font-weight:bold; margin-bottom:8px;">Card Number ${i + 1}</div>
                     <div class="card-name">${card.name}</div>
                     <div class="card-info">LIMIT: ₹${Number(card.limit).toLocaleString()}</div>
                     <div class="card-info">BILLING DATE: ${card.day}th</div>
                     ${isPaid ? `<div class="pay-time">✅ Paid: ${card.paidAt}</div>` : ''}
                     <div class="btn-group">
-                        <button class="action btn-pay" onclick="togglePaid(${i})">
-                            ${isPaid ? 'UNDO' : 'MARK PAID'}
-                        </button>
+                        <button class="action btn-pay" onclick="togglePaid(${i})">${isPaid ? 'UNDO' : 'MARK PAID'}</button>
                         <button class="action btn-del" onclick="deleteCard(${i})">DELETE</button>
                     </div>
                 `;
