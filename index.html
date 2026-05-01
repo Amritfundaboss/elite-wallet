@@ -14,9 +14,7 @@
         .upcoming { background: linear-gradient(135deg, #7a4a00 0%, #4d2e00 100%); border: 1px solid #ffcc00; }
         .unpaid { background: linear-gradient(135deg, #7b0000 0%, #4d0000 100%); border: 1px solid #ff0000; }
 
-        /* The small corner ID you like */
         .card-id-corner { position: absolute; top: 15px; right: 20px; font-size: 12px; color: rgba(255,255,255,0.5); }
-        
         .card-name { font-size: 22px; font-weight: bold; text-transform: uppercase; margin-top: 5px; }
         .card-info { font-size: 14px; margin: 5px 0; opacity: 0.9; }
         .pay-time { font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
@@ -84,7 +82,6 @@
             const status = document.getElementById('sync-status');
             status.innerText = "Pushing...";
             try {
-                // One-click copy formatting with backticks
                 const text = `🔐 ELITE WALLET BACKUP\nKEY: ${key}\n\nONE-CLICK COPY DATA:\n\`${JSON.stringify(cards)}\``;
                 await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
                     method: 'POST',
@@ -125,15 +122,38 @@
         function deleteCard(i) { if(confirm("Delete?")) { cards.splice(i,1); save(); } }
 
         function render() {
-            const list = document.getElementById('list'), today = new Date().getDate(), month = new Date().getMonth();
+            const list = document.getElementById('list'), 
+                  today = new Date(),
+                  todayDay = today.getDate(), 
+                  currentMonth = today.getMonth();
+            
             list.innerHTML = '';
+            
             cards.forEach((c, i) => {
-                const isPaid = c.lastPaidMonth === month;
-                const diff = c.day - today;
-                let s = "unpaid", l = "UNPAID";
-                if (isPaid) { s = "paid"; l = "PAID THIS MONTH"; }
-                else if (today >= c.day) { s = "unpaid"; l = "BILL GENERATED (OVERDUE)"; }
-                else if (diff <= 5 && diff > 0) { s = "upcoming"; l = `UPCOMING (${diff} DAYS LEFT)`; }
+                const isPaidThisMonth = c.lastPaidMonth === currentMonth;
+                const diff = c.day - todayDay;
+                
+                let s = "unpaid"; 
+                let l = "UNPAID";
+
+                if (isPaidThisMonth) {
+                    s = "paid";
+                    l = "PAID THIS MONTH";
+                } 
+                else if (todayDay < c.day) {
+                    s = "paid";
+                    l = "PREVIOUS BILL PAID";
+                    
+                    // Orange Warning 3 days before billing
+                    if (diff <= 3 && diff > 0) {
+                        s = "upcoming";
+                        l = `UPCOMING (${diff} DAYS LEFT)`;
+                    }
+                }
+                else {
+                    s = "unpaid";
+                    l = "BILL GENERATED (DUE)";
+                }
                 
                 const div = document.createElement('div'); div.className = `card ${s}`;
                 div.innerHTML = `
@@ -142,9 +162,9 @@
                     <div class="card-name">${c.name}</div>
                     <div class="card-info">LIMIT: ₹${Number(c.limit).toLocaleString()}</div>
                     <div class="card-info">BILLING DATE: ${c.day}th</div>
-                    ${isPaid ? `<div class="pay-time">✅ Paid: ${c.paidAt}</div>` : ''}
+                    ${c.paidAt ? `<div class="pay-time">✅ Last: ${c.paidAt}</div>` : ''}
                     <div class="btn-group">
-                        <button class="action btn-pay" onclick="togglePaid(${i})">${isPaid ? 'UNDO' : 'MARK PAID'}</button>
+                        <button class="action btn-pay" onclick="togglePaid(${i})">${isPaidThisMonth ? 'UNDO' : 'MARK PAID'}</button>
                         <button class="action btn-del" onclick="deleteCard(${i})">DELETE</button>
                     </div>
                 `;
